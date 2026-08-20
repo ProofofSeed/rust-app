@@ -114,7 +114,10 @@ impl Sidecar {
     }
 
     /// The fields that must agree across the ranges of one proof (everything
-    /// except the range and the per-file stream data).
+    /// except the range and the per-file stream data). The version component is
+    /// the deterministic-entropy version — the only version that governs whether
+    /// two ranges share prover entropy — not the tool's own version string,
+    /// which is informational and differs between the CLI and the Python package.
     pub fn assembly_key(&self) -> impl PartialEq + std::fmt::Debug + use<> {
         (
             self.statement.clone(),
@@ -126,7 +129,7 @@ impl Sidecar {
             self.chain_code.clone(),
             self.binding.clone(),
             self.output_keccak256.clone(),
-            self.versions.clone(),
+            self.versions.deterministic_entropy_version,
         )
     }
 }

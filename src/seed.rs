@@ -109,19 +109,26 @@ pub fn validate_bip39(mnemonic: &str) -> Result<(), String> {
             "{count} words is not a BIP-39 length (12/15/18/21/24)"
         ));
     }
-    let mut indices = Vec::with_capacity(count);
-    for word in &words {
+    // Positions are referenced by their place in the phrase, never by the word
+    // itself: a mnemonic word must not reach an error string (it is seed material).
+    let mut indices: Zeroizing<Vec<u32>> = Zeroizing::new(Vec::with_capacity(count));
+    for (position, word) in words.iter().enumerate() {
         match WORDLIST.binary_search(word) {
             Ok(i) => indices.push(i as u32),
-            Err(_) => return Err(format!("{word:?} is not a BIP-39 English word")),
+            Err(_) => {
+                return Err(format!(
+                    "word {} of {count} is not a BIP-39 English word",
+                    position + 1
+                ));
+            }
         }
     }
     // Repack the 11-bit indices: ENT entropy bits then CS = ENT/32 checksum bits.
     let total_bits = count * 11;
     let checksum_bits = total_bits / 33;
     let entropy_bits = total_bits - checksum_bits;
-    let mut bits = Vec::with_capacity(total_bits);
-    for index in indices {
+    let mut bits: Zeroizing<Vec<bool>> = Zeroizing::new(Vec::with_capacity(total_bits));
+    for index in indices.iter() {
         for shift in (0..11).rev() {
             bits.push((index >> shift) & 1 != 0);
         }

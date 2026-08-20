@@ -30,6 +30,12 @@ pub struct VerifyArgs {
     /// Override the sidecar's binding (hex)
     #[arg(long)]
     pub binding: Option<String>,
+    /// Reject the proof unless it carries at least this many responses — the
+    /// soundness the verifier demands, not a number the (relayable) sidecar can
+    /// lower. Defaults to the deployment parameter (438, 128-bit post-quantum);
+    /// pass a smaller value only if you deliberately accept weaker soundness.
+    #[arg(long, default_value_t = crate::DEFAULT_RESPONSES)]
+    pub min_responses: usize,
 }
 
 pub fn statement_by_name(name: &str) -> Result<StatementArg, String> {
@@ -58,13 +64,25 @@ pub fn run(args: VerifyArgs) -> Result<(), String> {
     let sidecar = Sidecar::read(&args.proof)?;
     let stream = std::fs::read(&args.proof)
         .map_err(|e| format!("cannot read proof {}: {e}", args.proof.display()))?;
-    if let Some((start, end)) = sidecar.range
-        && (end - start) as usize != sidecar.num_iters
-    {
+    if let Some((start, end)) = sidecar.range {
+        let carried = end
+            .checked_sub(start)
+            .ok_or_else(|| format!("malformed sidecar range {start}..{end}"))?;
+        if carried as usize != sidecar.num_iters {
+            return Err(format!(
+                "this file carries responses {start}..{end} of {} — a range, not a complete \
+                 proof; assemble the full range set first (proofofseed assemble)",
+                sidecar.num_iters
+            ));
+        }
+    }
+    // The soundness parameter is the verifier's to demand, not the sidecar's to
+    // assert: a relayer cannot pass off a downgraded proof by lowering num_iters.
+    if sidecar.num_iters < args.min_responses {
         return Err(format!(
-            "this file carries responses {start}..{end} of {} — a range, not a complete \
-             proof; assemble the full range set first (proofofseed assemble)",
-            sidecar.num_iters
+            "proof carries {} responses; verifier demands at least {} \
+             (soundness (2/3)^{} vs the required (2/3)^{}). Pass --min-responses to accept less.",
+            sidecar.num_iters, args.min_responses, sidecar.num_iters, args.min_responses
         ));
     }
     let statement = statement_by_name(&sidecar.statement)?;

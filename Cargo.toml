@@ -37,6 +37,15 @@ zeroize = { version = "1", default-features = false }
 [dev-dependencies]
 tempfile = "3"
 
+# proofofseed-host's stream verifier turns a malformed/truncated proof into a
+# `false` return via catch_unwind; that requires unwinding, so both profiles pin
+# it (a `panic = "abort"` build would abort the process on a crafted proof).
+[profile.release]
+panic = "unwind"
+
+[profile.dev]
+panic = "unwind"
+
 [patch.crates-io]
 zkboo = { path = "../../zkboo/zkboo" }
 zkboo-sha2 = { path = "../../zkboo/zkboo-sha2" }

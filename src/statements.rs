@@ -224,7 +224,7 @@ pub struct ResolveParams<'a> {
 /// request carries the derived parent chain code, so the verifier checks it).
 pub fn resolve(p: ResolveParams<'_>) -> Result<Resolved, String> {
     check_family(p.statement, p.family)?;
-    let mut salt = b"mnemonic".to_vec();
+    let mut salt = Zeroizing::new(b"mnemonic".to_vec());
     salt.extend_from_slice(p.passphrase);
     let seed = derive::bip39_seed(p.mnemonic, p.passphrase);
     let statement = p.statement;
@@ -256,7 +256,7 @@ pub fn resolve(p: ResolveParams<'_>) -> Result<Resolved, String> {
             StatementArg::Bip39Seed => {
                 let circuit = AnyCircuit::Seed(SeedCircuit {
                     mnemonic: p.mnemonic.to_vec(),
-                    salt: salt.clone(),
+                    salt: salt.to_vec(),
                     rounds: p.rounds,
                 });
                 (
@@ -338,7 +338,7 @@ pub fn resolve(p: ResolveParams<'_>) -> Result<Resolved, String> {
 /// Owned witness material (the shared [WitnessMaterial] borrows), zeroized on drop.
 enum MaterialOwner {
     Seed { seed: Zeroizing<Vec<u8>> },
-    Mnemonic { mnemonic: Zeroizing<Vec<u8>>, salt: Vec<u8> },
+    Mnemonic { mnemonic: Zeroizing<Vec<u8>>, salt: Zeroizing<Vec<u8>> },
     Child { parent_priv: Zeroizing<Vec<u8>>, chain_code: [u8; 32], index: u32 },
     Priv { private_key: Zeroizing<Vec<u8>> },
 }

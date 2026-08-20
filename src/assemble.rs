@@ -29,6 +29,10 @@ pub struct AssembleArgs {
     /// Read the expected output from a file (hex)
     #[arg(long, conflicts_with = "expected_output")]
     pub expected_output_file: Option<std::path::PathBuf>,
+    /// Reject unless the assembled proof carries at least this many responses
+    /// (see `verify --min-responses`); defaults to the deployment parameter
+    #[arg(long, default_value_t = crate::DEFAULT_RESPONSES)]
+    pub min_responses: usize,
 }
 
 fn collect_inputs(inputs: &[std::path::PathBuf]) -> Result<Vec<std::path::PathBuf>, String> {
@@ -104,6 +108,13 @@ pub fn run(args: AssembleArgs) -> Result<(), String> {
             "coverage ends at response {expected_start} of {total}: the tail is missing"
         ));
     }
+    if total < args.min_responses {
+        return Err(format!(
+            "assembled proof would carry {total} responses; demanded at least {} \
+             (pass --min-responses to accept less)",
+            args.min_responses
+        ));
+    }
     // Concatenate, checking each file against its recorded digest.
     let mut assembled: Vec<u8> = Vec::new();
     for (file, sidecar) in &parts {
@@ -127,6 +138,7 @@ pub fn run(args: AssembleArgs) -> Result<(), String> {
         expected_output: args.expected_output.clone(),
         expected_output_file: args.expected_output_file.clone(),
         binding: None,
+        min_responses: args.min_responses,
     };
     let output = expected_output(&probe, reference, statement)?;
     let binding = hexutil::decode(&reference.binding)?;

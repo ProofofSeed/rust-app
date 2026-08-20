@@ -65,9 +65,24 @@ impl Sidecar {
     }
 
     pub fn write(&self, proof: &std::path::Path) -> Result<(), String> {
+        use std::io::Write as _;
         let path = Self::path_for(proof);
         let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
-        std::fs::write(&path, json + "\n")
+        // The sidecar carries the anchored parent chain code (an extended-key
+        // component — see the security note in the README), so it is created 0600
+        // like the proof file rather than left at the umask default.
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let mut file = options
+            .open(&path)
+            .map_err(|e| format!("cannot write sidecar {}: {e}", path.display()))?;
+        file.write_all(json.as_bytes())
+            .and_then(|_| file.write_all(b"\n"))
             .map_err(|e| format!("cannot write sidecar {}: {e}", path.display()))
     }
 

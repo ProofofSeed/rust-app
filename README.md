@@ -2,7 +2,7 @@
 
 A standalone command-line prover and verifier for **proofs of seed**: zero-knowledge (ZKBoo) proofs that a BIP-39/BIP-32/SLIP-10-derived key was derived from the seed you hold, bound to a verifier-chosen context — for software wallets, on any host.
 
-This is the software-wallet counterpart of the ProofofSeed Ledger app: both consume the same `proofofseed-core` library (`../proofofseed-core`), so the statements, the wire-level request semantics, and the proof bytes are identical — a device and this CLI holding the same seed produce byte-identical ranged proofs and can split one proof between them.
+This is the software-wallet counterpart of the ProofofSeed Ledger app: both consume the same `proofofseed-core` library (`../proofofseed-core`), so the statements, the wire-level request semantics, and the proof bytes are identical. For the statements a stock device can actually prove against its own seed — the **derived-key** statements (`hardened-child`, `normal-child`, `public-key`, `ethereum-address`) — a device and this CLI holding the same seed produce byte-identical ranged proofs and can split one proof between them, provided the co-proving request carries the derivation **path, index, and parent chain code explicitly** (the CLI always does; a device request that instead relies on compiled-in defaults absorbs those fields differently and will not assemble). `master-key` and `bip39-seed` are proved here against the real seed but the device proves them only on a public test vector, so those two are not co-provable — only the CLI reaches them against a real seed.
 
 ## Usage
 
@@ -24,6 +24,10 @@ The mnemonic is read from a hidden prompt, `--seed-file` (or the file named by `
 ## Security posture
 
 This tool holds your **raw seed** in host memory while it runs — a categorically higher-stakes witness than a hardware wallet's derived keys. Run it only on a machine you trust, ideally air-gapped; key material is volatile-zeroed after use, but no swap or core-dump guarantees are claimed. Ranged (deterministic-entropy) proving must use one build across all runs of a proof — see `../proofofseed-core/knowledge/plan.md` and the ledger-app's `docs/range-proving.md` for the entropy design and its caveats.
+
+**The sidecar carries the parent chain code.** For a child-statement proof the verifier must anchor the parent chain code, so it is stored in the JSON sidecar (created mode 0600). A chain code is an extended-key component: combined with the parent public key it forms an xpub (all non-hardened descendant addresses become linkable), and for a `normal-child` proof, chain code plus the revealed child private key reconstructs the parent private key. Treat the sidecar as sensitive, hand it only to the intended verifier, and prefer hardened statements where the verifier already independently holds the anchor.
+
+**Soundness is the verifier's to demand.** The sidecar is metadata that travels with a relayed proof; `verify` and `assemble` therefore refuse any proof carrying fewer than `--min-responses` (default 438) responses rather than trusting the count the sidecar asserts, and the stream verifier rejects a proof with unread trailing responses — so a 438-response proof cannot be passed off as a weaker one.
 
 ## Structure and dependencies
 

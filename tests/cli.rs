@@ -91,10 +91,13 @@ fn ranged_proofs_assemble_verify_and_refuse_the_negatives() {
     let full = dir.join("full.pos");
     let assembled = run(&[
         "assemble", dir.join("a.pos").to_str().unwrap(), dir.join("b.pos").to_str().unwrap(),
-        "-o", full.to_str().unwrap(), "--expected-output-file", out_hex,
+        "-o", full.to_str().unwrap(), "--expected-output-file", out_hex, "--min-responses", "6",
     ]);
     assert_ok(&assembled, "assemble");
-    let verified = run(&["verify", "--proof", full.to_str().unwrap(), "--expected-output-file", out_hex]);
+    let verified = run(&[
+        "verify", "--proof", full.to_str().unwrap(), "--expected-output-file", out_hex,
+        "--min-responses", "6",
+    ]);
     assert_ok(&verified, "verify assembled");
     // Negatives, each with the passing twin above: a lone range is not a proof; a
     // wrong binding refuses; a gap refuses assembly.
@@ -102,9 +105,15 @@ fn ranged_proofs_assemble_verify_and_refuse_the_negatives() {
     assert_err(&lone, "a range, not a complete proof", "lone range");
     let wrong_binding = run(&[
         "verify", "--proof", full.to_str().unwrap(), "--expected-output-file", out_hex,
-        "--binding", "deadbeef",
+        "--binding", "deadbeef", "--min-responses", "6",
     ]);
     assert_err(&wrong_binding, "does not verify", "wrong binding");
+    // The soundness floor: the same complete proof is refused when the verifier
+    // demands more responses than it carries (a relayer cannot downgrade it).
+    let downgraded = run(&[
+        "verify", "--proof", full.to_str().unwrap(), "--expected-output-file", out_hex,
+    ]);
+    assert_err(&downgraded, "demands at least 438", "soundness floor");
     assert_ok(&bin().args(part("4..6", "c.pos")).output().unwrap(), "prove 4..6");
     let gap = run(&[
         "assemble", dir.join("a.pos").to_str().unwrap(), dir.join("c.pos").to_str().unwrap(),
@@ -177,9 +186,17 @@ fn cli_ranged_stream_is_byte_identical_to_the_library() {
 }
 
 #[test]
-fn dry_run_matches_the_profiler_and_defaults_to_438() {
-    let out = run(&["prove", "--statement", "hardened-child", "--dry-run"]);
-    assert_ok(&out, "dry run");
+fn dry_run_matches_the_profiler_defaults_to_438_and_reads_no_seed() {
+    // No --seed-file, no stdin, no PROOFOFSEED_SEED_FILE, stdin left as the test
+    // harness's (non-piped): a dry run that tried to read a seed would either
+    // prompt (blocking/failing) or error — success proves it touched no witness.
+    let out = bin()
+        .args(["prove", "--statement", "hardened-child", "--dry-run"])
+        .env_remove("PROOFOFSEED_SEED_FILE")
+        .stdin(std::process::Stdio::null())
+        .output()
+        .expect("runs");
+    assert_ok(&out, "dry run without any seed source");
     let text = stdout(&out);
     let expected = profile(&proofofseed_circuits::hardened_child_circuit())
         .response_size::<[u8; 32], [u8; 32]>();
@@ -188,7 +205,6 @@ fn dry_run_matches_the_profiler_and_defaults_to_438() {
         "dry-run response size must match zkboo-profiling:\n{text}"
     );
     assert!(text.contains("438 total"), "the default response count must be 438:\n{text}");
-    assert!(!text.contains("mnemonic"), "a dry run must not touch seed input:\n{text}");
 }
 
 #[test]
@@ -206,6 +222,19 @@ fn failure_paths_never_echo_the_mnemonic() {
     assert_err(&out, "hardened", "wrong index hardness");
     for stream in [stdout(&out), stderr(&out)] {
         assert!(!stream.contains("abandon"), "mnemonic leaked into output:\n{stream}");
+    }
+    // The checksum-validation failure path must not echo the offending word
+    // either (a real word of the user's phrase). Use a real word so a naive
+    // implementation would be tempted to print it.
+    let typo = dir.join("typo.txt");
+    std::fs::write(&typo, MNEMONIC.replace("about", "zzzzz")).unwrap();
+    let out = run(&[
+        "derive", "--statement", "ethereum-address", "--path", "m/44'/60'/0'/0/0",
+        "--seed-file", typo.to_str().unwrap(),
+    ]);
+    assert_err(&out, "not a BIP-39 English word", "invalid word");
+    for stream in [stdout(&out), stderr(&out)] {
+        assert!(!stream.contains("zzzzz"), "an invalid word leaked into output:\n{stream}");
     }
 }
 
@@ -297,7 +326,9 @@ fn trng_full_proof_round_trips_and_differs_between_runs() {
     };
     prove("t1.pos");
     prove("t2.pos");
-    let verified = run(&["verify", "--proof", dir.join("t1.pos").to_str().unwrap()]);
+    let verified = run(&[
+        "verify", "--proof", dir.join("t1.pos").to_str().unwrap(), "--min-responses", "1",
+    ]);
     assert_ok(&verified, "verify TRNG proof from its sidecar (public output)");
     let a = std::fs::read(dir.join("t1.pos")).unwrap();
     let b = std::fs::read(dir.join("t2.pos")).unwrap();

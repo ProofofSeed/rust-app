@@ -1,0 +1,52 @@
+[package]
+name = "proofofseed-cli"
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-3.0-or-later"
+description = "Standalone proof-of-seed prover and verifier for software wallets: create, verify and assemble ZKBoo proofs of BIP-39/BIP-32/SLIP-10 key derivations."
+
+[[bin]]
+name = "proofofseed"
+path = "src/main.rs"
+
+[dependencies]
+# The shared proof-of-seed stack (resolved to ../proofofseed-core by the patch
+# table below until publication).
+proofofseed-circuits = { version = "0.1.0" }
+proofofseed-host = { version = "0.1.0" }
+zkboo = { version = "0.1.0", default-features = false, features = ["u32", "u64", "keccak"] }
+# In-circuit SHA-256, executed natively for the BIP-39 mnemonic checksum — no
+# separate hash implementation enters the trust path.
+zkboo-sha2 = { version = "0.1.0" }
+# Proof-size/memory planning for `profile` and `prove --dry-run`.
+zkboo-profiling = { version = "0.1.0" }
+# Deliberate dependencies, each with a stated reason:
+# clap: argument parsing (the Rust security-tooling mainstream; off the secret
+# dataflow — the mnemonic never passes through argv).
+clap = { version = "4.5", features = ["derive"] }
+# rpassword: hidden terminal input for the mnemonic/passphrase prompts.
+rpassword = "7"
+# serde/serde_json: the proof sidecar metadata files.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# getrandom: OS randomness for the (rangeless) fresh prover entropy.
+getrandom = "0.2"
+# zeroize: volatile-zeroing of every buffer that held the mnemonic or a key.
+zeroize = { version = "1", default-features = false }
+
+[dev-dependencies]
+tempfile = "3"
+
+[patch.crates-io]
+zkboo = { path = "../../zkboo/zkboo" }
+zkboo-sha2 = { path = "../../zkboo/zkboo-sha2" }
+zkboo-hmac = { path = "../../zkboo/zkboo-hmac" }
+zkboo-modular = { path = "../../zkboo/zkboo-modular" }
+zkboo-ecc = { path = "../../zkboo/zkboo-ecc" }
+zkboo-keccak = { path = "../../zkboo/zkboo-keccak" }
+zkboo-ripemd160 = { path = "../../zkboo/zkboo-ripemd160" }
+zkboo-bip32 = { path = "../../zkboo/zkboo-bip32" }
+zkboo-profiling = { path = "../../zkboo/zkboo-profiling" }
+zkboo-circuit-hash = { path = "../../zkboo/zkboo-circuit-hash" }
+proofofseed-circuits = { path = "../proofofseed-core/circuits" }
+proofofseed-host = { path = "../proofofseed-core/host" }

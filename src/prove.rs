@@ -197,8 +197,8 @@ fn resolve_from(
     let (path, index) = parse_selector_paths(selector)?;
     let (mnemonic, passphrase) = read_seed_material(seed_args)?;
     resolve(ResolveParams {
-        statement: selector.statement,
-        family: selector.family,
+        statement: selector.statement.to_statement(),
+        family: selector.family.wire(),
         path,
         index,
         num_iters: responses,
@@ -221,7 +221,8 @@ fn human_bytes(n: u64) -> String {
 
 fn dry_run(args: &ProveArgs) -> Result<(), String> {
     let selector = &args.selector;
-    let circuit = dummy_circuit(selector.statement, selector.family, selector.rounds)?;
+    let circuit =
+        dummy_circuit(selector.statement.to_statement(), selector.family.wire(), selector.rounds)?;
     let prof = circuit.profile();
     let response = prof.response_size::<[u8; 32], [u8; 32]>() as u64;
     let (start, end) = args.range.map_or((0, args.responses), |(a, b)| (a as usize, b as usize));
@@ -353,7 +354,8 @@ pub fn run_derive(args: DeriveArgs) -> Result<(), String> {
 pub fn run_profile(args: ProfileArgs) -> Result<(), String> {
     check_responses(args.responses, args.range)?;
     let selector = &args.selector;
-    let circuit = dummy_circuit(selector.statement, selector.family, selector.rounds)?;
+    let circuit =
+        dummy_circuit(selector.statement.to_statement(), selector.family.wire(), selector.rounds)?;
     let prof = circuit.profile();
     let response = prof.response_size::<[u8; 32], [u8; 32]>() as u64;
     let emitted = args.range.map_or(args.responses as u64, |(a, b)| (b - a) as u64);

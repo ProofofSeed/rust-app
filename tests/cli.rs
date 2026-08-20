@@ -349,7 +349,7 @@ fn key_statements_reject_a_stray_index() {
         "derive", "--statement", "ethereum-address", "--path", "m/44'/60'/0'/0/0",
         "--index", "0'", "--seed-file", seed.to_str().unwrap(),
     ]);
-    assert_err(&out, "no --index", "stray index on a key statement");
+    assert_err(&out, "no index", "stray index on a key statement");
 }
 
 #[test]

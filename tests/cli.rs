@@ -311,6 +311,48 @@ fn stdin_channel_accepts_a_piped_mnemonic() {
 }
 
 #[test]
+fn a_truncated_proof_is_refused_cleanly_without_a_panic_trace() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dir = dir.path();
+    let seed = seed_file(dir);
+    let seed = seed.to_str().unwrap();
+    let proof = dir.join("p.pos");
+    let out_hex = dir.join("o.hex");
+    let derived = run(&[
+        "derive", "--statement", "ethereum-address", "--path", "m/44'/60'/0'/0/0",
+        "--seed-file", seed,
+    ]);
+    std::fs::write(&out_hex, stdout(&derived)).unwrap();
+    assert_ok(&bin().args([
+        "prove", "--statement", "ethereum-address", "--path", "m/44'/60'/0'/0/0",
+        "-n", "2", "--seed-file", seed, "-o", proof.to_str().unwrap(),
+    ]).output().unwrap(), "prove for truncation");
+    // Lop a byte off the middle of a response, leaving the sidecar untouched.
+    let bytes = std::fs::read(&proof).unwrap();
+    std::fs::remove_file(&proof).unwrap();
+    std::fs::write(&proof, &bytes[..bytes.len() - 1]).unwrap();
+    let out = run(&[
+        "verify", "--proof", proof.to_str().unwrap(), "--expected-output-file",
+        out_hex.to_str().unwrap(), "--min-responses", "2",
+    ]);
+    assert_err(&out, "does not verify", "truncated proof");
+    assert!(!stderr(&out).contains("panicked"), "no panic trace leaks:\n{}", stderr(&out));
+    assert!(!stderr(&out).contains(".rs:"), "no source path leaks:\n{}", stderr(&out));
+}
+
+#[test]
+fn key_statements_reject_a_stray_index() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dir = dir.path();
+    let seed = seed_file(dir);
+    let out = run(&[
+        "derive", "--statement", "ethereum-address", "--path", "m/44'/60'/0'/0/0",
+        "--index", "0'", "--seed-file", seed.to_str().unwrap(),
+    ]);
+    assert_err(&out, "no --index", "stray index on a key statement");
+}
+
+#[test]
 fn trng_full_proof_round_trips_and_differs_between_runs() {
     let dir = tempfile::tempdir().expect("tempdir");
     let dir = dir.path();

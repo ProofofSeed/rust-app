@@ -59,12 +59,16 @@ pub fn read_mnemonic(source: &SeedSource) -> Result<Zeroizing<String>, String> {
             }
         }
     };
+    // Build the normalized phrase char-by-char: `to_ascii_lowercase()` would
+    // allocate a fresh throwaway String per word, each holding a mnemonic word
+    // verbatim and dropped unwiped. `normalized` cannot reallocate (exact
+    // capacity) and is moved into the Zeroizing wrapper below.
     let mut normalized = String::with_capacity(raw.len());
     for word in raw.split_whitespace() {
         if !normalized.is_empty() {
             normalized.push(' ');
         }
-        normalized.push_str(&word.to_ascii_lowercase());
+        normalized.extend(word.chars().map(|c| c.to_ascii_lowercase()));
     }
     if normalized.is_empty() {
         return Err("empty mnemonic".into());

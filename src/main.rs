@@ -14,6 +14,7 @@
 //! public output is itself key material, only a commitment to the output).
 
 mod assemble;
+mod fsutil;
 mod hexutil;
 mod paths;
 mod prove;

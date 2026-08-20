@@ -94,17 +94,19 @@ pub fn run(args: VerifyArgs) -> Result<(), String> {
     };
     let chain_code = sidecar.chain_code.as_deref().map(hexutil::decode).transpose()?;
     let index = sidecar.index.as_deref().map(paths::parse_component).transpose()?;
-    let ok = proofofseed_host::verify(
-        statement.id(),
-        &output,
-        &stream,
-        sidecar.num_iters,
-        &binding,
-        sidecar.rounds,
-        chain_code.as_deref(),
-        index,
-        family.wire() as u8,
-    );
+    let ok = crate::fsutil::quietly(|| {
+        proofofseed_host::verify(
+            statement.id(),
+            &output,
+            &stream,
+            sidecar.num_iters,
+            &binding,
+            sidecar.rounds,
+            chain_code.as_deref(),
+            index,
+            family.wire() as u8,
+        )
+    });
     if ok {
         println!(
             "PASS: {} ({}) verifies with {} responses under the given binding and output",

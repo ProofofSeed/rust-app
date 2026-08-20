@@ -2,14 +2,14 @@
 
 A standalone command-line prover and verifier for **proofs of seed**: zero-knowledge (ZKBoo) proofs that a BIP-39/BIP-32/SLIP-10-derived key was derived from the seed you hold, bound to a verifier-chosen context — for software wallets, on any host.
 
-This is the software-wallet counterpart of the ProofofSeed Ledger app: both consume the same `proofofseed-core` library (`../proofofseed-core`), so the statements, the wire-level request semantics, and the proof bytes are identical. For the statements a stock device can actually prove against its own seed — the **derived-key** statements (`hardened-child`, `normal-child`, `public-key`, `ethereum-address`) — a device and this CLI holding the same seed produce byte-identical ranged proofs and can split one proof between them, provided the co-proving request carries the derivation **path, index, and parent chain code explicitly** (the CLI always does; a device request that instead relies on compiled-in defaults absorbs those fields differently and will not assemble). `master-key` and `bip39-seed` are proved here against the real seed but the device proves them only on a public test vector, so those two are not co-provable — only the CLI reaches them against a real seed.
+This is the software-wallet counterpart of the ProofofSeed Ledger app: both consume the same `proofofseed-core` library (`../proofofseed-core`), so the statements, the wire-level request semantics, and the proof bytes are identical. For the statements a stock device can actually prove against its own seed — the **derived-key** statements (`hardened-child`, `normal-child`, `public-key`, `ethereum-address`) — a device and this CLI holding the same seed produce byte-identical ranged proofs and can split one proof between them, provided both requests carry the same derivation fields: for the child statements, the parent **path, child index, and parent chain code**, all of which the CLI always sets and a co-proving device request must set explicitly rather than falling back to compiled-in defaults (those absorb differently into the entropy); for `public-key`/`ethereum-address`, the full **path** and no index/chain code on either side. `master-key` and `bip39-seed` are proved here against the real seed but the device proves them only on a public test vector, so those two are not co-provable — only the CLI reaches them against a real seed.
 
 ## Usage
 
 ```sh
 proofofseed prove --statement hardened-child --path "m/84'/0'" --index "0'" \
     --binding <hex> -o proof.pos                    # prompts for the mnemonic
-proofofseed prove ... --range 0..219                # resumable/parallel ranges
+proofofseed prove ... --range 0..100                # resumable/parallel ranges
 proofofseed verify --proof proof.pos --expected-output-file output.hex
 proofofseed assemble part1.pos part2.pos -o full.pos --expected-output-file output.hex
 proofofseed derive --statement ethereum-address --path "m/44'/60'/0'/0/0"

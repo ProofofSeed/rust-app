@@ -258,6 +258,13 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
     if args.dry_run {
         return dry_run(&args);
     }
+    if args.responses < DEFAULT_RESPONSES {
+        eprintln!(
+            "warning: proving {} responses; a verifier demanding the default {} will reject this \
+             proof (they must pass --min-responses {})",
+            args.responses, DEFAULT_RESPONSES, args.responses
+        );
+    }
     let binding = read_binding(&args.binding, &args.binding_file)?;
     let resolved = resolve_from(&args.selector, args.responses, binding, args.range, &args.seed)?;
     let statement = args.selector.statement;
@@ -272,7 +279,7 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
         None => format!("proofofseed-{}.pos", statement.name()),
     };
     let proof_path = args.output.unwrap_or_else(|| default_name.into());
-    let file = open_new(&proof_path)?;
+    let file = crate::fsutil::create_new_0600(&proof_path)?;
     let mut writer = std::io::BufWriter::new(file);
     let written = resolved
         .circuit
@@ -367,22 +374,8 @@ pub fn run_profile(args: ProfileArgs) -> Result<(), String> {
     Ok(())
 }
 
-/// Creates a new file, mode 0600, refusing to overwrite.
-fn open_new(path: &std::path::Path) -> Result<std::fs::File, String> {
-    let mut options = std::fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    options
-        .open(path)
-        .map_err(|e| format!("cannot create {}: {e} (refusing to overwrite)", path.display()))
-}
-
 fn write_secret(path: &std::path::Path, data: &[u8]) -> Result<(), String> {
-    let mut file = open_new(path)?;
+    let mut file = crate::fsutil::create_new_0600(path)?;
     file.write_all(data)
         .and_then(|_| file.write_all(b"\n"))
         .map_err(|e| format!("cannot write {}: {e}", path.display()))

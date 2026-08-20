@@ -145,25 +145,23 @@ pub fn run(args: AssembleArgs) -> Result<(), String> {
     let chain_code = reference.chain_code.as_deref().map(hexutil::decode).transpose()?;
     let index = reference.index.as_deref().map(crate::paths::parse_component).transpose()?;
     let family = crate::verify::family_by_name(&reference.family)?;
-    let ok = proofofseed_host::verify(
-        statement.id(),
-        &output,
-        &assembled,
-        total,
-        &binding,
-        reference.rounds,
-        chain_code.as_deref(),
-        index,
-        family.wire() as u8,
-    );
+    let ok = crate::fsutil::quietly(|| {
+        proofofseed_host::verify(
+            statement.id(),
+            &output,
+            &assembled,
+            total,
+            &binding,
+            reference.rounds,
+            chain_code.as_deref(),
+            index,
+            family.wire() as u8,
+        )
+    });
     if !ok {
         return Err("the assembled proof does not verify — nothing written".into());
     }
-    let mut file = std::fs::OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&args.output)
-        .map_err(|e| format!("cannot create {}: {e} (refusing to overwrite)", args.output.display()))?;
+    let mut file = crate::fsutil::create_new_0600(&args.output)?;
     file.write_all(&assembled)
         .map_err(|e| format!("cannot write {}: {e}", args.output.display()))?;
     let sidecar = Sidecar {

@@ -70,17 +70,9 @@ impl Sidecar {
         let json = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
         // The sidecar carries the anchored parent chain code (an extended-key
         // component — see the security note in the README), so it is created 0600
-        // like the proof file rather than left at the umask default.
-        let mut options = std::fs::OpenOptions::new();
-        options.write(true).create(true).truncate(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options
-            .open(&path)
-            .map_err(|e| format!("cannot write sidecar {}: {e}", path.display()))?;
+        // and refuses to overwrite or follow a symlink, like the proof file
+        // (the proof is always created fresh, so the sidecar never overwrites).
+        let mut file = crate::fsutil::create_new_0600(&path)?;
         file.write_all(json.as_bytes())
             .and_then(|_| file.write_all(b"\n"))
             .map_err(|e| format!("cannot write sidecar {}: {e}", path.display()))
@@ -97,6 +89,25 @@ impl Sidecar {
                 "sidecar {} has format {:?}, expected {FORMAT:?}",
                 path.display(),
                 sidecar.format
+            ));
+        }
+        // The wire format caps the response count; a sidecar claiming more is
+        // malformed (and the range, if any, must lie within it).
+        if sidecar.num_iters == 0 || sidecar.num_iters > crate::MAX_RESPONSES {
+            return Err(format!(
+                "sidecar {} declares {} responses, outside 1..={}",
+                path.display(),
+                sidecar.num_iters,
+                crate::MAX_RESPONSES
+            ));
+        }
+        if let Some((start, end)) = sidecar.range
+            && (start >= end || end as usize > sidecar.num_iters)
+        {
+            return Err(format!(
+                "sidecar {} has range {start}..{end} outside its {} responses",
+                path.display(),
+                sidecar.num_iters
             ));
         }
         Ok(sidecar)

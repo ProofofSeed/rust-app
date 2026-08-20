@@ -232,6 +232,18 @@ pub fn resolve(p: ResolveParams<'_>) -> Result<Resolved, String> {
     if !needs_path && (p.path.is_some() || p.index.is_some()) {
         return Err(format!("{} takes no --path/--index", statement.name()));
     }
+    // The key statements (public-key, ethereum-address) take the full key path but
+    // no child index — a stray --index would silently perturb the deterministic
+    // entropy (it is absorbed) while being ignored by the circuit and the verifier,
+    // so two co-provers disagreeing on it would fail to assemble. Reject it.
+    if matches!(statement, StatementArg::PublicKey | StatementArg::EthereumAddress)
+        && p.index.is_some()
+    {
+        return Err(format!("{} takes --path (the full key path) but no --index", statement.name()));
+    }
+    if p.rounds > u16::MAX as usize {
+        return Err(format!("--rounds must be at most {} (the wire field is 16-bit)", u16::MAX));
+    }
     let mut request = ProofRequest {
         num_iters: p.num_iters,
         rounds: p.rounds,

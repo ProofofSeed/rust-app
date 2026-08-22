@@ -166,6 +166,12 @@ fn parse_selector_paths(
     Ok((path, index))
 }
 
+/// Whether the run will use a non-empty BIP-39 passphrase (the operator asked to be
+/// prompted for one).
+fn seed_args_have_passphrase(args: &SeedArgs) -> bool {
+    args.passphrase
+}
+
 /// Reads and validates the mnemonic (and optional passphrase) from the chosen
 /// channel.
 fn read_seed_material(
@@ -269,6 +275,17 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
     let binding = read_binding(&args.binding, &args.binding_file)?;
     let resolved = resolve_from(&args.selector, args.responses, binding, args.range, &args.seed)?;
     let statement = args.selector.statement;
+    // The BIP-39 circuit allocates its PBKDF2 salt as constants, so the salt is a public
+    // parameter: a verifier cannot rebuild the circuit without it, and the salt is
+    // "mnemonic" followed by the passphrase. Say so at the point the sidecar is about to
+    // carry it, rather than leaving the operator to infer it from the file.
+    if statement == StatementArg::Bip39Seed && seed_args_have_passphrase(&args.seed) {
+        eprintln!(
+            "warning: this statement's PBKDF2 salt is a public circuit parameter, and the \
+             salt contains your passphrase; the sidecar will carry it so the verifier can \
+             rebuild the circuit"
+        );
+    }
     let output = resolved.circuit.output();
     let entropy = match &resolved.digest {
         Some(digest) => resolved.circuit.entropy_for(digest),
@@ -308,6 +325,12 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
         },
         output: (!statement.output_is_secret()).then(|| hexutil::encode(&output)),
         output_keccak256: hexutil::keccak_hex(&output),
+        witness_len: resolved.witness_shape.as_ref().map(|(n, _)| *n),
+        salt: resolved
+            .witness_shape
+            .as_ref()
+            .and_then(|(_, salt)| salt.as_ref())
+            .map(|s| hexutil::encode(s)),
         stream_bytes: written,
         stream_keccak256: hexutil::keccak_hex(&stream),
         versions: Versions {

@@ -45,6 +45,19 @@ pub struct Sidecar {
     pub output: Option<String>,
     /// Keccak-256 of the expected public output (always present).
     pub output_keccak256: String,
+    /// The witness byte length, for the seed statements whose circuit allocates one
+    /// input per witness byte. A verifier needs it to rebuild the circuit; without it
+    /// the verifier falls back to the canonical test vector and rejects the proof.
+    /// `None` for statements whose shape follows from their public parameters.
+    #[serde(default)]
+    pub witness_len: Option<usize>,
+    /// The byte length of the BIP-39 PBKDF2 salt, `"mnemonic" ‖ passphrase`.
+    ///
+    /// The length only. The salt's bytes are witness, so a verifier rebuilds the circuit
+    /// from the two lengths and never receives the passphrase; what it can infer is how
+    /// long one is (`salt_len - 8`), or that there is none (`salt_len == 8`).
+    #[serde(default)]
+    pub salt_len: Option<usize>,
     pub stream_bytes: u64,
     pub stream_keccak256: String,
     pub versions: Versions,
@@ -129,6 +142,8 @@ impl Sidecar {
             self.chain_code.clone(),
             self.binding.clone(),
             self.output_keccak256.clone(),
+            self.witness_len,
+            self.salt_len,
             self.versions.deterministic_entropy_version,
         )
     }

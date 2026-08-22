@@ -166,6 +166,12 @@ fn parse_selector_paths(
     Ok((path, index))
 }
 
+/// Whether the run will use a non-empty BIP-39 passphrase (the operator asked to be
+/// prompted for one).
+fn seed_args_have_passphrase(args: &SeedArgs) -> bool {
+    args.passphrase
+}
+
 /// Reads and validates the mnemonic (and optional passphrase) from the chosen
 /// channel.
 fn read_seed_material(
@@ -269,6 +275,15 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
     let binding = read_binding(&args.binding, &args.binding_file)?;
     let resolved = resolve_from(&args.selector, args.responses, binding, args.range, &args.seed)?;
     let statement = args.selector.statement;
+    // The salt is witness, so the passphrase itself stays with the prover. Its *length*
+    // does not: the circuit allocates one input per salt byte, so the verifier is told how
+    // many there are. Worth saying once, at the point the sidecar is written.
+    if statement == StatementArg::Bip39Seed && seed_args_have_passphrase(&args.seed) {
+        eprintln!(
+            "note: your passphrase is witness and does not reach the verifier; its \
+             length does — the sidecar records the salt's byte count"
+        );
+    }
     let output = resolved.circuit.output();
     let entropy = match &resolved.digest {
         Some(digest) => resolved.circuit.entropy_for(digest),
@@ -308,6 +323,8 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
         },
         output: (!statement.output_is_secret()).then(|| hexutil::encode(&output)),
         output_keccak256: hexutil::keccak_hex(&output),
+        witness_len: resolved.witness_shape.as_ref().map(|(n, _)| *n),
+        salt_len: resolved.witness_shape.as_ref().and_then(|(_, salt_len)| *salt_len),
         stream_bytes: written,
         stream_keccak256: hexutil::keccak_hex(&stream),
         versions: Versions {

@@ -95,7 +95,7 @@ pub fn run(args: VerifyArgs) -> Result<(), String> {
     let chain_code = sidecar.chain_code.as_deref().map(hexutil::decode).transpose()?;
     let index = sidecar.index.as_deref().map(paths::parse_component).transpose()?;
     let ok = crate::fsutil::quietly(|| {
-        proofofseed_host::verify(
+        proofofseed_host::verify_with_shape(
             statement.id(),
             &output,
             &stream,
@@ -105,6 +105,8 @@ pub fn run(args: VerifyArgs) -> Result<(), String> {
             chain_code.as_deref(),
             index,
             family.wire() as u8,
+            sidecar.witness_len,
+            sidecar.salt_len,
         )
     });
     if ok {

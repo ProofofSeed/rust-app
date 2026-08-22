@@ -51,15 +51,13 @@ pub struct Sidecar {
     /// `None` for statements whose shape follows from their public parameters.
     #[serde(default)]
     pub witness_len: Option<usize>,
-    /// The BIP-39 PBKDF2 salt, hex — `"mnemonic" ‖ passphrase`, a public parameter of
-    /// that statement's circuit.
+    /// The byte length of the BIP-39 PBKDF2 salt, `"mnemonic" ‖ passphrase`.
     ///
-    /// ⚠️ It contains the passphrase. A sidecar for a BIP-39 proof made under a
-    /// passphrase therefore discloses it, which is inherent to the statement as
-    /// defined: the circuit allocates the salt as constants, so a verifier cannot
-    /// rebuild the circuit without it.
+    /// The length only. The salt's bytes are witness, so a verifier rebuilds the circuit
+    /// from the two lengths and never receives the passphrase; what it can infer is how
+    /// long one is (`salt_len - 8`), or that there is none (`salt_len == 8`).
     #[serde(default)]
-    pub salt: Option<String>,
+    pub salt_len: Option<usize>,
     pub stream_bytes: u64,
     pub stream_keccak256: String,
     pub versions: Versions,
@@ -145,7 +143,7 @@ impl Sidecar {
             self.binding.clone(),
             self.output_keccak256.clone(),
             self.witness_len,
-            self.salt.clone(),
+            self.salt_len,
             self.versions.deterministic_entropy_version,
         )
     }

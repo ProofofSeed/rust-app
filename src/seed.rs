@@ -143,7 +143,14 @@ pub fn validate_bip39(mnemonic: &str) -> Result<(), String> {
             entropy[i / 8] |= 1 << (7 - i % 8);
         }
     }
-    let digest = proofofseed_host::harness::exec_words(&Sha256Of { msg: entropy.to_vec() });
+    // Through `checked_payload`, not the raw outputs: every circuit ends its u8 section
+    // with an assertion word, and reading it as digest would reject valid mnemonics. Only
+    // the first checksum byte is consulted here, so the raw form happened to work — which
+    // is the kind of luck that stops holding when the word count changes.
+    let digest = proofofseed_circuits::checked_payload(
+        proofofseed_host::harness::exec_words(&Sha256Of { msg: entropy.to_vec() }),
+    )
+    .expect("the SHA-256 circuit makes no assertion that can fail");
     for (i, bit) in bits[entropy_bits..].iter().enumerate() {
         let digest_bit = (digest.u8[i / 8] >> (7 - i % 8)) & 1 != 0;
         if *bit != digest_bit {

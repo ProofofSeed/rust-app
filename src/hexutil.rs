@@ -29,7 +29,7 @@ pub fn decode(s: &str) -> Result<Vec<u8>, String> {
 /// suite's sidecars and fixtures).
 pub fn keccak_hex(data: &[u8]) -> String {
     use zkboo::crypto::Hasher;
-    let mut h = zkboo::crypto::Keccak256Hasher::new();
+    let mut h = proofofseed_circuits::hasher::Keccak256Hasher::new();
     h.update(data);
     let mut out = [0u8; 32];
     h.finalize_into(&mut out);

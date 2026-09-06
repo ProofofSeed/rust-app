@@ -14,7 +14,7 @@ use std::io::{IsTerminal, Read};
 use crate::wordlist::WORDLIST;
 use zeroize::{Zeroize, Zeroizing};
 use zkboo::backend::{Backend, Frontend};
-use zkboo::circuit::{Assertions, Circuit};
+use zkboo::circuit::Circuit;
 
 /// Where the mnemonic comes from (mutually exclusive; prompt is the default).
 pub struct SeedSource {
@@ -102,7 +102,7 @@ impl Circuit for Sha256Of {
             .for_each(|w| frontend.output(w));
         // Every circuit in the suite ends with the assertion word, and the caller strips
         // it with `checked_payload`; a circuit that omitted it would lose a digest byte.
-        Assertions::new().output(frontend);
+        proofofseed_circuits::assert_nothing(frontend);
     }
 }
 

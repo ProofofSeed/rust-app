@@ -608,6 +608,7 @@ dependencies = [
 name = "zkboo-ecc"
 version = "1.2.0"
 dependencies = [
+ "zeroize",
  "zkboo",
  "zkboo-modular",
 ]
@@ -630,6 +631,7 @@ dependencies = [
 name = "zkboo-modular"
 version = "1.2.0"
 dependencies = [
+ "zeroize",
  "zkboo",
 ]
 

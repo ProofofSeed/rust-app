@@ -11,7 +11,7 @@ use proofofseed_circuits::request::Family;
 use proofofseed_host::statement::Statement;
 
 pub use proofofseed_host::statement::{
-    AnyCircuit, Resolved, ResolveParams, dummy_circuit, fresh_entropy, resolve,
+    Resolved, ResolveParams, dummy_circuit, fresh_entropy, resolve,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, ValueEnum)]

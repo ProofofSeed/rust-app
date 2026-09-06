@@ -100,6 +100,9 @@ impl Circuit for Sha256Of {
         zkboo_sha2::sha256bytes(frontend.allocator(), msg)
             .into_iter()
             .for_each(|w| frontend.output(w));
+        // Every circuit in the suite ends with the assertion word, and the caller strips
+        // it with `checked_payload`; a circuit that omitted it would lose a digest byte.
+        proofofseed_circuits::assert_nothing(frontend);
     }
 }
 

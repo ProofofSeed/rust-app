@@ -32,7 +32,8 @@ The default panic hook still prints a trace, including the binary's build path, 
 
 For a child-statement proof the verifier must anchor the parent chain code, so the sidecar carries it.
 A chain code is an extended-key component: combined with the parent public key it forms an xpub, which makes every non-hardened descendant address linkable, and for a `normal-child` proof the chain code together with the revealed child private key reconstructs the parent private key.
-Sidecars are created mode 0600. Hand one only to the intended verifier, and prefer hardened statements where the verifier already holds the anchor independently.
+Sidecars are created mode 0600.
+Hand one only to the intended verifier, and prefer hardened statements where the verifier already holds the anchor independently.
 
 ## Soundness is the verifier's to demand
 

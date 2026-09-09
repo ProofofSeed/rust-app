@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+
 //! The canonical BIP-39 English wordlist, sorted and ASCII lowercase.
 //!
 //! bitcoin/bips bip-0039 `english.txt`, SHA-256

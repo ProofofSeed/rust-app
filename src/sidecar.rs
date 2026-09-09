@@ -1,16 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! The proof sidecar: a JSON file (`<proof>.json`) carrying the request
-//! metadata, versions, and stream digest of a proof file. Metadata only — the
-//! proof file itself stays the raw device-identical byte stream, and
-//! verification never trusts the sidecar for soundness (the verifier re-derives
-//! everything from the stream and the parameters).
-//!
-//! Secrecy rule: for statements whose public output is itself key material
-//! (master key, children, BIP-39 seed) the sidecar stores only
-//! `output_keccak256`; the verifier supplies the expected output out of band and
-//! the commitment cross-checks it. The genuinely public outputs (public key,
-//! Ethereum address) are stored plainly in `output`.
+//! The JSON metadata record written alongside a proof file.
 
 use serde::{Deserialize, Serialize};
 
@@ -29,33 +19,25 @@ pub struct Sidecar {
     pub family: String,
     pub num_iters: usize,
     pub rounds: usize,
-    /// The request's derivation path (parent path for child statements, full
-    /// path for key statements), `None` for the seed-level statements.
+    /// The request's derivation path.
     pub path: Option<String>,
-    /// The asserted child index (child statements only), e.g. `0'`.
+    /// The asserted child index.
     pub index: Option<String>,
-    /// The derived parent chain code the request anchors (child statements only).
+    /// The derived parent chain code the request anchors.
     pub chain_code: Option<String>,
     pub binding: String,
-    /// The half-open response range this file carries; `None` = the full
-    /// sequence proved in one TRNG-entropy run.
+    /// The half-open response range this file carries.
     pub range: Option<(u16, u16)>,
     pub entropy_mode: EntropyMode,
-    /// The plain public output — only for statements whose output is public.
+    /// The plain public output, for the statements whose output is public.
     pub output: Option<String>,
-    /// Keccak-256 of the expected public output (always present).
+    /// Keccak-256 of the expected public output.
     pub output_keccak256: String,
-    /// The witness byte length, for the seed statements whose circuit allocates one
-    /// input per witness byte. A verifier needs it to rebuild the circuit; without it
-    /// the verifier falls back to the canonical test vector and rejects the proof.
-    /// `None` for statements whose shape follows from their public parameters.
+    /// The witness byte length, for the statements whose circuit allocates one input
+    /// per witness byte.
     #[serde(default)]
     pub witness_len: Option<usize>,
-    /// The byte length of the BIP-39 PBKDF2 salt, `"mnemonic" ‖ passphrase`.
-    ///
-    /// The length only. The salt's bytes are witness, so a verifier rebuilds the circuit
-    /// from the two lengths and never receives the passphrase; what it can infer is how
-    /// long one is (`salt_len - 8`), or that there is none (`salt_len == 8`).
+    /// The byte length of the BIP-39 PBKDF2 salt.
     #[serde(default)]
     pub salt_len: Option<usize>,
     pub stream_bytes: u64,
@@ -126,11 +108,7 @@ impl Sidecar {
         Ok(sidecar)
     }
 
-    /// The fields that must agree across the ranges of one proof (everything
-    /// except the range and the per-file stream data). The version component is
-    /// the deterministic-entropy version — the only version that governs whether
-    /// two ranges share prover entropy — not the tool's own version string,
-    /// which is informational and differs between the CLI and the Python package.
+    /// The fields that must agree across the ranges of one proof.
     pub fn assembly_key(&self) -> impl PartialEq + std::fmt::Debug + use<> {
         (
             self.statement.clone(),

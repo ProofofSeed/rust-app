@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Small hex helpers (kept in-tree rather than pulling a dependency).
+//! Hex encoding and decoding helpers.
 
 pub fn encode(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
@@ -25,8 +25,7 @@ pub fn decode(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-/// Keccak-256 of `data`, hex-encoded (the digest used throughout the proof
-/// suite's sidecars and fixtures).
+/// Keccak-256 of the given bytes, hex-encoded.
 pub fn keccak_hex(data: &[u8]) -> String {
     use zkboo::crypto::Hasher;
     let mut h = proofofseed_circuits::hasher::Keccak256Hasher::new();

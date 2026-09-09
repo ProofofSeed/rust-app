@@ -1,6 +1,7 @@
-//! The canonical BIP-39 English wordlist (2048 words, bitcoin/bips bip-0039
-//! `english.txt`, SHA-256 `2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda`).
-//! Sorted, ASCII lowercase, word lengths 3..=8. Data only — no logic.
+//! The canonical BIP-39 English wordlist, sorted and ASCII lowercase.
+//!
+//! bitcoin/bips bip-0039 `english.txt`, SHA-256
+//! `2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda`.
 
 pub static WORDLIST: [&str; 2048] = [
     "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract",

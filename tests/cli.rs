@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Milestone-2 acceptance tests for the `proofofseed` CLI (knowledge/plan.md of
-//! proofofseed-core): end-to-end round trips with refusal negatives, CLI ≡
-//! library byte-equality in deterministic mode, dry-run ≡ zkboo-profiling,
-//! witness hygiene on the failure paths, and the 438 default.
+//! Acceptance tests for the `proofofseed` command-line tool.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -283,7 +280,7 @@ fn derive_guards_secret_outputs_and_prints_public_ones() {
         "--seed-file", seed,
     ]);
     assert_ok(&public, "public output without --reveal");
-    // The serialized output embeds the test mnemonic's well-known first Ethereum
+    // The serialised output embeds the test mnemonic's well-known first Ethereum
     // address, 0x9858EfFD232B4033E47d90003D41EC34EcaEda94.
     assert!(
         stdout(&public).contains("9858effd232b4033e47d90003d41ec34ecaeda94"),

@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Mnemonic input and validation. The mnemonic is never accepted on the command
-//! line or in an environment variable: the channels are an interactive hidden
-//! prompt (the default), a file (`--seed-file`, or the file named by
-//! `PROOFOFSEED_SEED_FILE`), and piped stdin (refused when stdin is a TTY, so a
-//! mnemonic is never typed with echo on). The BIP-39 checksum is validated
-//! against the embedded English wordlist, with the checksum SHA-256 computed by
-//! executing the zkboo-sha2 circuit — the same hash implementation the proofs
-//! use, so no separate one enters the trust path.
+//! Mnemonic input and BIP-39 validation.
 
 use std::io::{IsTerminal, Read};
 
@@ -16,14 +9,13 @@ use zeroize::{Zeroize, Zeroizing};
 use zkboo::backend::{Backend, Frontend};
 use zkboo::circuit::Circuit;
 
-/// Where the mnemonic comes from (mutually exclusive; prompt is the default).
+/// Where the mnemonic comes from.
 pub struct SeedSource {
     pub seed_file: Option<std::path::PathBuf>,
     pub stdin: bool,
 }
 
-/// Reads the mnemonic from the selected channel and normalizes it (trimmed,
-/// single spaces, ASCII lowercase).
+/// Reads the mnemonic from the selected channel and normalises it.
 pub fn read_mnemonic(source: &SeedSource) -> Result<Zeroizing<String>, String> {
     let raw: Zeroizing<String> = match (&source.seed_file, source.stdin) {
         (Some(_), true) => return Err("choose one of --seed-file and --stdin".into()),
@@ -59,10 +51,7 @@ pub fn read_mnemonic(source: &SeedSource) -> Result<Zeroizing<String>, String> {
             }
         }
     };
-    // Build the normalized phrase char-by-char: `to_ascii_lowercase()` would
-    // allocate a fresh throwaway String per word, each holding a mnemonic word
-    // verbatim and dropped unwiped. `normalized` cannot reallocate (exact
-    // capacity) and is moved into the Zeroizing wrapper below.
+    // Built character by character, and at exact capacity: see knowledge/security.md.
     let mut normalized = String::with_capacity(raw.len());
     for word in raw.split_whitespace() {
         if !normalized.is_empty() {
@@ -76,14 +65,14 @@ pub fn read_mnemonic(source: &SeedSource) -> Result<Zeroizing<String>, String> {
     Ok(Zeroizing::new(normalized))
 }
 
-/// Prompts for the BIP-39 passphrase (hidden input).
+/// Prompts for the BIP-39 passphrase.
 pub fn read_passphrase() -> Result<Zeroizing<String>, String> {
     rpassword::prompt_password("BIP-39 passphrase (hidden, empty for none): ")
         .map(Zeroizing::new)
         .map_err(|e| format!("cannot read prompt: {e}"))
 }
 
-/// SHA-256 by executing the zkboo-sha2 circuit natively.
+/// SHA-256 of a message, computed by executing the `zkboo-sha2` circuit natively.
 struct Sha256Of {
     msg: Vec<u8>,
 }
@@ -100,14 +89,11 @@ impl Circuit for Sha256Of {
         zkboo_sha2::sha256bytes(frontend.allocator(), msg)
             .into_iter()
             .for_each(|w| frontend.output(w));
-        // Every circuit in the suite ends with the assertion word, and the caller strips
-        // it with `checked_payload`; a circuit that omitted it would lose a digest byte.
         proofofseed_circuits::assert_nothing(frontend);
     }
 }
 
-/// Validates the mnemonic as BIP-39: known word count (12/15/18/21/24), every
-/// word in the English wordlist, and a correct checksum.
+/// Validates a mnemonic against the BIP-39 word count, wordlist and checksum.
 pub fn validate_bip39(mnemonic: &str) -> Result<(), String> {
     let words: Vec<&str> = mnemonic.split(' ').collect();
     let count = words.len();
@@ -116,8 +102,7 @@ pub fn validate_bip39(mnemonic: &str) -> Result<(), String> {
             "{count} words is not a BIP-39 length (12/15/18/21/24)"
         ));
     }
-    // Positions are referenced by their place in the phrase, never by the word
-    // itself: a mnemonic word must not reach an error string (it is seed material).
+    // A word is referred to by position, never by itself: see knowledge/security.md.
     let mut indices: Zeroizing<Vec<u32>> = Zeroizing::new(Vec::with_capacity(count));
     for (position, word) in words.iter().enumerate() {
         match WORDLIST.binary_search(word) {
@@ -146,10 +131,6 @@ pub fn validate_bip39(mnemonic: &str) -> Result<(), String> {
             entropy[i / 8] |= 1 << (7 - i % 8);
         }
     }
-    // Through `checked_payload`, not the raw outputs: every circuit ends its u8 section
-    // with an assertion word, and reading it as digest would reject valid mnemonics. Only
-    // the first checksum byte is consulted here, so the raw form happened to work — which
-    // is the kind of luck that stops holding when the word count changes.
     let digest = proofofseed_circuits::checked_payload(
         proofofseed_host::harness::exec_words(&Sha256Of { msg: entropy.to_vec() }),
     )

@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! The `assemble` command: gathers range-proof files (given explicitly or found
-//! in a directory), checks through their sidecars that they belong to one proof
-//! (same request, same versions, deterministic entropy), that their ranges
-//! exactly partition the full response sequence, and that each file matches its
-//! recorded digest — then concatenates them in index order, verifies the
-//! assembled proof, and writes it with its own sidecar.
+//! The `assemble` command.
 
 use std::io::Write as _;
 
@@ -30,7 +25,6 @@ pub struct AssembleArgs {
     #[arg(long, conflicts_with = "expected_output")]
     pub expected_output_file: Option<std::path::PathBuf>,
     /// Reject unless the assembled proof carries at least this many responses
-    /// (see `verify --min-responses`); defaults to the deployment parameter
     #[arg(long, default_value_t = crate::DEFAULT_RESPONSES)]
     pub min_responses: usize,
 }

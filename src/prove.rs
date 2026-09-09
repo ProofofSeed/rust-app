@@ -25,8 +25,8 @@ pub struct StatementSelector {
     /// The derivation family
     #[arg(long, value_enum, default_value = "bip32")]
     pub family: FamilyArg,
-    /// Derivation path: the PARENT path for the child statements (e.g. "m/84'/0'"),
-    /// the full key path for public-key/ethereum-address
+    /// Derivation path: the parent path for a child statement, the full key path
+    /// for public-key and ethereum-address
     #[arg(long)]
     pub path: Option<String>,
     /// The child index for the child statements (e.g. "0'" — hardened marked with ' or h)
@@ -83,8 +83,7 @@ pub struct ProveArgs {
     /// Plan only: print proof size and memory numbers, touch no witness
     #[arg(long)]
     pub dry_run: bool,
-    /// With --dry-run: time one single-response proof on this machine and
-    /// extrapolate (uses the canonical test-vector witness, not your seed)
+    /// With --dry-run, time one single-response proof and extrapolate
     #[arg(long, requires = "dry_run")]
     pub calibrate: bool,
     #[command(flatten)]
@@ -166,14 +165,12 @@ fn parse_selector_paths(
     Ok((path, index))
 }
 
-/// Whether the run will use a non-empty BIP-39 passphrase (the operator asked to be
-/// prompted for one).
+/// Whether the run will use a non-empty BIP-39 passphrase.
 fn seed_args_have_passphrase(args: &SeedArgs) -> bool {
     args.passphrase
 }
 
-/// Reads and validates the mnemonic (and optional passphrase) from the chosen
-/// channel.
+/// Reads and validates the mnemonic, and the passphrase where one is asked for.
 fn read_seed_material(
     args: &SeedArgs,
 ) -> Result<(Zeroizing<String>, Zeroizing<String>), String> {

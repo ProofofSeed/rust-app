@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! Thin CLI adapter over the shared statement plumbing in
-//! `proofofseed_host::statement`: clap value-enums for the statement and family
-//! arguments, converting to the shared `Statement`/`Family` types. The resolve
-//! logic, circuit dispatch, witness assembly and entropy live in the library so
-//! the CLI and the Python package cannot drift.
+//! Command-line adapters over the shared statement plumbing in
+//! `proofofseed_host::statement`.
 
 use clap::ValueEnum;
 use proofofseed_circuits::request::Family;

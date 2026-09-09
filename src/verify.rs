@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! The `verify` command: checks a proof file against its sidecar's parameters
-//! (each overridable on the command line) and the expected public output. The
-//! sidecar is metadata, not authority: the statement's soundness comes from the
-//! stream itself under the parameters the verifier chooses to trust, and for
-//! secret-output statements the expected output must be supplied out of band
-//! (cross-checked against the sidecar's commitment).
+//! The `verify` command.
 
 use clap::Args;
 
@@ -30,10 +25,7 @@ pub struct VerifyArgs {
     /// Override the sidecar's binding (hex)
     #[arg(long)]
     pub binding: Option<String>,
-    /// Reject the proof unless it carries at least this many responses — the
-    /// soundness the verifier demands, not a number the (relayable) sidecar can
-    /// lower. Defaults to the deployment parameter (438, 128-bit post-quantum);
-    /// pass a smaller value only if you deliberately accept weaker soundness.
+    /// Reject the proof unless it carries at least this many responses
     #[arg(long, default_value_t = crate::DEFAULT_RESPONSES)]
     pub min_responses: usize,
 }
@@ -123,8 +115,7 @@ pub fn run(args: VerifyArgs) -> Result<(), String> {
     }
 }
 
-/// Resolves the expected output from the arguments and/or sidecar, enforcing the
-/// secrecy rule and cross-checking the sidecar's commitment when both exist.
+/// Resolves the expected output from the arguments and the sidecar.
 pub fn expected_output(
     args: &VerifyArgs,
     sidecar: &Sidecar,

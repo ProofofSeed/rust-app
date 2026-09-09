@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 
-//! BIP-32 path and child-index parsing/formatting: `m/84'/0'` (apostrophe or
-//! `h`/`H` marks a hardened component).
+//! BIP-32 path and child-index parsing and formatting.
 
 pub const HARDENED: u32 = 0x8000_0000;
 

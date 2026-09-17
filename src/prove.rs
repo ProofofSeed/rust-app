@@ -293,15 +293,13 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
     };
     let proof_path = args.output.unwrap_or_else(|| default_name.into());
     let file = crate::fsutil::create_new_0600(&proof_path)?;
-    let mut writer = std::io::BufWriter::new(file);
+    let mut writer = hexutil::HashingWriter::new(std::io::BufWriter::new(file));
     let written = resolved
         .circuit
         .prove_to(args.responses, (start, end), &*entropy, &resolved.request.binding, &mut writer)
         .map_err(|e| format!("proof streaming failed: {e}"))?;
-    writer.flush().map_err(|e| format!("proof streaming failed: {e}"))?;
-    drop(writer);
-    let stream = std::fs::read(&proof_path)
-        .map_err(|e| format!("cannot re-read {}: {e}", proof_path.display()))?;
+    let stream_keccak256 =
+        writer.finish().map_err(|e| format!("proof streaming failed: {e}"))?;
     let sidecar = Sidecar {
         format: crate::sidecar::FORMAT.into(),
         statement: statement.name().into(),
@@ -323,7 +321,7 @@ pub fn run(args: ProveArgs) -> Result<(), String> {
         witness_len: resolved.witness_shape.as_ref().map(|(n, _)| *n),
         salt_len: resolved.witness_shape.as_ref().and_then(|(_, salt_len)| *salt_len),
         stream_bytes: written,
-        stream_keccak256: hexutil::keccak_hex(&stream),
+        stream_keccak256,
         versions: Versions {
             cli: env!("CARGO_PKG_VERSION").into(),
             deterministic_entropy_version:

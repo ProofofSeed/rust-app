@@ -34,3 +34,38 @@ pub fn keccak_hex(data: &[u8]) -> String {
     h.finalize_into(&mut out);
     encode(&out)
 }
+
+/// A writer that Keccak-256-hashes everything written through it.
+pub struct HashingWriter<W: std::io::Write> {
+    inner: W,
+    hasher: proofofseed_circuits::hasher::Keccak256Hasher,
+}
+
+impl<W: std::io::Write> HashingWriter<W> {
+    pub fn new(inner: W) -> Self {
+        use zkboo::crypto::Hasher;
+        Self { inner, hasher: proofofseed_circuits::hasher::Keccak256Hasher::new() }
+    }
+
+    /// Flushes the inner writer and returns the hex digest of everything written.
+    pub fn finish(mut self) -> std::io::Result<String> {
+        use zkboo::crypto::Hasher;
+        self.inner.flush()?;
+        let mut out = [0u8; 32];
+        self.hasher.finalize_into(&mut out);
+        Ok(encode(&out))
+    }
+}
+
+impl<W: std::io::Write> std::io::Write for HashingWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        use zkboo::crypto::Hasher;
+        let n = self.inner.write(buf)?;
+        self.hasher.update(&buf[..n]);
+        Ok(n)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}

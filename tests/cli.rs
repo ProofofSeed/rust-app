@@ -222,6 +222,19 @@ fn cli_ranged_stream_is_byte_identical_to_the_library() {
     let entropy = deterministic_seed_entropy(&circuit, &digest);
     let library_bytes = gen_stream_range(&circuit, 6, (1, 3), &*entropy, &request.binding);
     assert_eq!(cli_bytes, library_bytes, "CLI stream vs library stream");
+    // The digest the sidecar records is taken while streaming, never from the file.
+    let sidecar: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("seg.pos.json")).unwrap()).unwrap();
+    let digest = {
+        use zkboo::crypto::Hasher;
+        let mut h = proofofseed_circuits::hasher::Keccak256Hasher::new();
+        h.update(&cli_bytes);
+        let mut out = [0u8; 32];
+        h.finalize_into(&mut out);
+        out.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    };
+    assert_eq!(sidecar["stream_keccak256"], digest.as_str(), "sidecar stream digest");
+    assert_eq!(sidecar["stream_bytes"], cli_bytes.len(), "sidecar stream length");
 }
 
 #[test]

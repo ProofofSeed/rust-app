@@ -33,6 +33,8 @@ The full posture is in [`knowledge/security.md`](knowledge/security.md).
 ## Building
 
 The `proofofseed-core` and `zkboo` crates are resolved by path until they are published.
+`build.rs` refuses to build if the lockfile resolves any of them from a registry, which is what a `[patch.crates-io]` table does silently once a local version stops satisfying its requirement.
+`rust-toolchain.toml` pins the compiler to Rust 1.95.0.
 
 ```sh
 cargo build --release

@@ -140,7 +140,7 @@ pub fn run(args: AssembleArgs) -> Result<(), String> {
     let index = reference.index.as_deref().map(crate::paths::parse_component).transpose()?;
     let family = crate::verify::family_by_name(&reference.family)?;
     let ok = crate::fsutil::quietly(|| {
-        proofofseed_host::verify(
+        proofofseed_host::verify_with_shape(
             statement.id(),
             &output,
             &assembled,
@@ -150,6 +150,8 @@ pub fn run(args: AssembleArgs) -> Result<(), String> {
             chain_code.as_deref(),
             index,
             family.wire() as u8,
+            reference.witness_len,
+            reference.salt_len,
         )
     });
     if !ok {

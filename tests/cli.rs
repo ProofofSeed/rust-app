@@ -134,6 +134,48 @@ fn ranged_proofs_assemble_verify_and_refuse_the_negatives() {
 }
 
 #[test]
+fn ranged_seed_statements_assemble_and_verify_under_their_witness_shape() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let dir = dir.path();
+    let seed = seed_file(dir);
+    let seed = seed.to_str().unwrap();
+    for (statement, extra) in [("master-key", &[][..]), ("bip39-seed", &["--rounds", "2"][..])] {
+        let derived = bin()
+            .args(["derive", "--statement", statement, "--seed-file", seed, "--reveal"])
+            .args(extra)
+            .output()
+            .unwrap();
+        assert_ok(&derived, "derive --reveal");
+        let out_hex = dir.join(format!("{statement}.hex"));
+        std::fs::write(&out_hex, stdout(&derived)).unwrap();
+        let out_hex = out_hex.to_str().unwrap();
+        let mut parts = Vec::new();
+        for range in ["0..2", "2..4"] {
+            let part = dir.join(format!("{statement}-{range}.pos"));
+            let proved = bin()
+                .args(["prove", "--statement", statement, "-n", "4", "--seed-file", seed])
+                .args(extra)
+                .args(["--range", range, "-o", part.to_str().unwrap()])
+                .output()
+                .unwrap();
+            assert_ok(&proved, "prove range");
+            parts.push(part);
+        }
+        let full = dir.join(format!("{statement}.pos"));
+        let assembled = run(&[
+            "assemble", parts[0].to_str().unwrap(), parts[1].to_str().unwrap(),
+            "-o", full.to_str().unwrap(), "--expected-output-file", out_hex, "--min-responses", "4",
+        ]);
+        assert_ok(&assembled, "assemble a seed statement");
+        let verified = run(&[
+            "verify", "--proof", full.to_str().unwrap(), "--expected-output-file", out_hex,
+            "--min-responses", "4",
+        ]);
+        assert_ok(&verified, "verify an assembled seed statement");
+    }
+}
+
+#[test]
 fn cli_ranged_stream_is_byte_identical_to_the_library() {
     // The acceptance's interop pin: the CLI's deterministic ranged stream must
     // equal the shared library's for the identical request — the same equality a
@@ -180,6 +222,19 @@ fn cli_ranged_stream_is_byte_identical_to_the_library() {
     let entropy = deterministic_seed_entropy(&circuit, &digest);
     let library_bytes = gen_stream_range(&circuit, 6, (1, 3), &*entropy, &request.binding);
     assert_eq!(cli_bytes, library_bytes, "CLI stream vs library stream");
+    // The digest the sidecar records is taken while streaming, never from the file.
+    let sidecar: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("seg.pos.json")).unwrap()).unwrap();
+    let digest = {
+        use zkboo::crypto::Hasher;
+        let mut h = proofofseed_circuits::hasher::Keccak256Hasher::new();
+        h.update(&cli_bytes);
+        let mut out = [0u8; 32];
+        h.finalize_into(&mut out);
+        out.iter().map(|b| format!("{b:02x}")).collect::<String>()
+    };
+    assert_eq!(sidecar["stream_keccak256"], digest.as_str(), "sidecar stream digest");
+    assert_eq!(sidecar["stream_bytes"], cli_bytes.len(), "sidecar stream length");
 }
 
 #[test]

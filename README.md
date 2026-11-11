@@ -57,3 +57,8 @@ cargo test --release
 Dependencies beyond the proofofseed and zkboo stack are `clap`, `rpassword`, `serde`, `serde_json`, `getrandom` and `zeroize`, each with its reason stated in `Cargo.toml`.
 
 Licensed LGPL-3.0-or-later; every source file carries an SPDX header.
+
+## Licence
+
+Copyright © 2026 Stefano Gogioso.
+The code is LGPL-3.0-or-later (see `LICENSE`); vendored third-party code keeps its own licence.

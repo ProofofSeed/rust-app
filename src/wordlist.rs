@@ -4,6 +4,7 @@
 //!
 //! bitcoin/bips bip-0039 `english.txt`, SHA-256
 //! `2f5eed53a4727b4bf8880d8f3f199efc90e58503646d9ff8eff3a2ed3b24dbda`.
+//! The list is part of BIP-39, which is published under the BSD 2-Clause licence; it is reproduced here unmodified.
 
 pub static WORDLIST: [&str; 2048] = [
     "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract",

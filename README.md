@@ -3,6 +3,13 @@
 A standalone command-line prover and verifier for proofs of seed: zero-knowledge (ZKBoo) proofs that a BIP-39/BIP-32/SLIP-10-derived key was derived from a held seed, bound to a verifier-chosen context.
 It is the software-wallet counterpart of the ProofofSeed Ledger app, and consumes the same `proofofseed-core` library, so the statements, the wire-level request semantics and the proof bytes are identical on both.
 
+## Status
+
+A research prototype: it has not been audited and is not for production use.
+The 438-response default gives a soundness error of `(2/3)^438 <= 2^-256` only under the Fiat-Shamir transform and the security of the Keccak-256 hash, assumptions that have not been independently reviewed.
+It holds a raw seed in host memory, with no guarantee against swap or core dumps.
+The `zkboo` crates and `proofofseed-core` are not yet published, so it cannot be built from a clean checkout until they are; see Building.
+
 ## Usage
 
 ```sh

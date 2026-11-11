@@ -15,6 +15,7 @@ use proofofseed_host::harness::gen_stream_range;
 use zkboo_profiling::profile;
 
 const H: u32 = 0x8000_0000;
+// Public BIP-39 reference mnemonic (BIP-39 test vectors), not a wallet seed.
 const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
 
 fn bin() -> Command {

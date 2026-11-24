@@ -12,8 +12,7 @@ name = "proofofseed"
 path = "src/main.rs"
 
 [dependencies]
-# The shared proof-of-seed stack (resolved to ../proofofseed-core by the patch
-# table below until publication).
+# The shared proof-of-seed stack.
 proofofseed-circuits = { version = "0.1.0" }
 proofofseed-host = { version = "0.1.0" }
 zkboo = { version = "1.3.0", default-features = false, features = ["u32", "u64"] }
@@ -47,17 +46,3 @@ panic = "unwind"
 
 [profile.dev]
 panic = "unwind"
-
-[patch.crates-io]
-zkboo = { path = "../../zkboo/zkboo" }
-zkboo-sha2 = { path = "../../zkboo/zkboo-sha2" }
-zkboo-hmac = { path = "../../zkboo/zkboo-hmac" }
-zkboo-modular = { path = "../../zkboo/zkboo-modular" }
-zkboo-ecc = { path = "../../zkboo/zkboo-ecc" }
-zkboo-keccak = { path = "../../zkboo/zkboo-keccak" }
-zkboo-ripemd160 = { path = "../../zkboo/zkboo-ripemd160" }
-zkboo-bip32 = { path = "../../zkboo/zkboo-bip32" }
-zkboo-profiling = { path = "../../zkboo/zkboo-profiling" }
-zkboo-circuit-hash = { path = "../../zkboo/zkboo-circuit-hash" }
-proofofseed-circuits = { path = "../proofofseed-core/circuits" }
-proofofseed-host = { path = "../proofofseed-core/host" }
